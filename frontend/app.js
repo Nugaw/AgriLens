@@ -26,16 +26,27 @@ async function shrink(file, max = 1600, q = 0.85) {
   } catch { return file; }
 }
 const PICK = {};   // slot -> Promise<File>, compressed in the background as soon as the photo is chosen
+// function mountPickers() {
+//   document.querySelectorAll("[data-pick]").forEach(box => {
+//     const id = box.dataset.pick;
+//     box.innerHTML = `<div class="two"><label class="big"><input type="file" accept="image/*" capture="environment" hidden>📷 <span data-t="camera"></span></label>` +
+//       `<label class="big alt"><input type="file" accept="image/*" hidden>🖼️ <span data-t="gallery"></span></label></div><img class="prev" alt="">`;
+//     box.querySelectorAll("input").forEach(inp => inp.onchange = () => {
+//       const f = inp.files[0]; if (!f) return;
+//       const p = box.querySelector(".prev"); p.src = URL.createObjectURL(f); p.style.display = "block";
+//       PICK[id] = shrink(f, id === "plant" ? 1280 : 1600); inp.value = "";
+//     });
+//   });
+// }
 function mountPickers() {
   document.querySelectorAll("[data-pick]").forEach(box => {
     const id = box.dataset.pick;
-    box.innerHTML = `<div class="two"><label class="big"><input type="file" accept="image/*" capture="environment" hidden>📷 <span data-t="camera"></span></label>` +
-      `<label class="big alt"><input type="file" accept="image/*" hidden>🖼️ <span data-t="gallery"></span></label></div><img class="prev" alt="">`;
-    box.querySelectorAll("input").forEach(inp => inp.onchange = () => {
-      const f = inp.files[0]; if (!f) return;
+    box.innerHTML = `<label class="big"><input type="file" accept="image/*" hidden>📷 <span data-t="pick"></span></label><img class="prev" alt="">`;
+    box.querySelector("input").onchange = e => {
+      const inp = e.target, f = inp.files[0]; if (!f) return;
       const p = box.querySelector(".prev"); p.src = URL.createObjectURL(f); p.style.display = "block";
       PICK[id] = shrink(f, id === "plant" ? 1280 : 1600); inp.value = "";
-    });
+    };
   });
 }
 
