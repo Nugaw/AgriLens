@@ -1,0 +1,28 @@
+# Runtime data (chats, scans, uploaded docs, cached TTS audio, SQLite DB)
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Environment / secrets
+.env
+.env.*
+
+# Downloaded voice models (large, re-download with scripts/get_voice.py)
+*.onnx
+*.onnx.json
+
+# SQLite leftovers (if the DB is ever moved outside data/)
+*.db
+*.db-wal
+*.db-shm
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,8 @@
+[
+  {"id": "icimod-agri", "name": "ICIMOD – Agriculture (English)", "type": "rss",
+   "url": "https://blog.icimod.org/tag/agriculture/feed/", "enabled": true},
+  {"id": "my-nepali-site-1", "name": "(यहाँ आफ्नो नेपाली कृषि साइटको RSS राख्नुहोस्)", "type": "rss",
+   "url": "", "enabled": false},
+  {"id": "my-html-site", "name": "(RSS नभएको साइट: link_contains मा समाचार लिङ्कको अंश राख्नुहोस्)", "type": "html",
+   "url": "", "link_contains": "/news/", "enabled": false}
+]

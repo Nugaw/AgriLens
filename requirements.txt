@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+httpx
+python-multipart
+Pillow
+pypdf
+pypdfium2        # reads scanned PDFs / old-font Nepali PDFs through Gemma
+beautifulsoup4   # news pages
+# optional offline Nepali voice:  pip install piper-tts   (then: python scripts/get_voice.py)
