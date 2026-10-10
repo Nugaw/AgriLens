@@ -9,94 +9,151 @@
 </head>
 
 <body>
-  <header>
-    <div>
-      <h1>🌾 <span data-t="title"></span></h1>
-      <p data-t="sub"></p>
-    </div>
-    <div class="right">
-      <button id="fsDown" title="A−">A−</button><button id="fsUp" title="A+">A+</button>
-      <div class="lang"><button id="ne">नेपाली</button><button id="en">EN</button></div>
-      <button id="theme">🌓</button>
-    </div>
-  </header>
-  <div id="banner" hidden></div>
-  <nav id="tabs"></nav>
-  <main>
-    <!-- बाली -->
-    <section id="plant" class="card on">
-      <h2 data-t="plantH"></h2>
-      <p class="hint" data-t="plantHint"></p>
-      <div data-pick="plant"></div>
-      <input id="plantNote" data-p="note" type="text" autocomplete="off">
-      <button class="go" data-t="analyze" id="plantGo"></button>
-      <div class="out" id="plantOut"></div>
-      <h3 data-t="history"></h3>
-      <div id="plantHist" class="histlist"></div>
-    </section>
-    <!-- लेबल -->
-    <section id="label" class="card">
-      <h2 data-t="labelH"></h2>
-      <p class="hint" data-t="labelHint"></p>
-      <select id="kind">
-        <option value="pesticide" data-t="pest"></option>
-        <option value="fertilizer" data-t="fert"></option>
-      </select>
-      <h3 data-t="front"></h3>
-      <div data-pick="front"></div>
-      <h3 data-t="back"></h3>
-      <div data-pick="back"></div>
-      <button class="go" data-t="scan" id="labelGo"></button>
-      <div class="out" id="labelOut"></div>
-      <h3 data-t="history"></h3>
-      <div id="labelHist" class="histlist"></div>
-    </section>
-    <!-- कागजात -->
-    <section id="doc" class="card">
-      <h2 data-t="docH"></h2>
-      <p class="hint" data-t="docHint"></p>
-      <label class="big"><input type="file" id="docFile" accept=".pdf,.txt,.md,image/*" hidden>📄 <span
-          data-t="docUp"></span></label>
-      <label class="chk"><input type="checkbox" id="ocr"> <span data-t="ocrOpt"></span></label>
-      <div class="out" id="docStat"></div>
-      <div id="docList" class="histlist"></div>
-      <div id="docBox" hidden>
-        <h3 id="docName"></h3>
-        <button class="go alt" id="docSumBtn" data-t="summary"></button>
-        <div class="out" id="docSum"></div>
-        <div id="docLog" class="log"></div>
-        <div class="askrow"><input id="docQ" data-p="docPh" type="text" enterkeyhint="send" autocomplete="off"><button
-            class="mic" id="docMic">🎤</button><button class="send" id="docGo" data-t="ask"></button></div>
+  <div class="app">
+
+    <!-- ===== sidebar ===== -->
+    <aside class="side">
+      <div class="brand"><span class="logo">🌱</span>
+        <div><b>AgriLens</b><small>कृषि लेन्स</small></div>
       </div>
-    </section>
-    <!-- समाचार -->
-    <section id="news" class="card">
-      <h2 data-t="newsH"></h2>
-      <p class="hint" data-t="newsHint"></p>
-      <button class="go" id="newsRefresh" data-t="newsRefresh"></button>
-      <button class="go alt" id="newsAll" data-t="newsAll"></button>
-      <div class="out" id="newsStat"></div>
-      <div id="newsList"></div>
-    </section>
-    <!-- च्याट -->
-    <section id="chat" class="card">
-      <div class="toolbar"><button id="chatHistBtn" data-t="oldChats"></button><button id="chatNew"
-          data-t="newChat"></button></div>
-      <div id="chatHist" class="histlist" hidden></div>
-      <div id="chatCtx" class="chip" hidden></div>
-      <div id="log" class="log"></div>
-      <div id="chatImgChip" class="chip" hidden></div>
-      <div class="askrow">
-        <label class="mic"><input type="file" id="chatImg" accept="image/*" hidden>📷</label>
-        <input id="chatQ" data-p="chatPh" type="text" enterkeyhint="send" autocomplete="off"
-          autocapitalize="sentences"><button class="mic" id="chatMic">🎤</button><button class="send" id="chatGo"
-          data-t="ask"></button>
+      <p class="sidelabel" data-t="tools"></p>
+      <nav id="tabs"></nav>
+      <div class="sidebot">
+        <button id="histBtn"><i>🕘</i><span data-t="myHist"></span></button>
+        <div class="speed">🔊 <span data-t="speed"></span><input type="range" id="rate" min="0.6" max="1.3" step="0.1"
+            value="0.9"></div>
       </div>
-    </section>
-  </main>
-  <div class="speedrow">🔊 <span data-t="speed"></span> <input type="range" id="rate" min="0.6" max="1.3" step="0.1"
-      value="0.9"></div>
-  <footer data-t="foot"></footer>
+    </aside>
+
+    <div class="col">
+      <!-- ===== top bar ===== -->
+      <header class="top">
+        <div class="crumb"><span class="home">🏠</span><b id="crumb"></b><small data-t="crumbHome"></small></div>
+        <div class="right">
+          <span id="pill" class="pill"></span>
+          <div class="lang"><button id="ne">नेपाली</button><button id="en">English</button></div>
+          <div class="fs"><button id="fsDown" title="A−">A−</button><button id="fsUp" title="A+">A+</button></div>
+          <button id="theme" class="ico" title="Theme">🌓</button>
+        </div>
+      </header>
+      <div id="banner" hidden></div>
+
+      <main class="wrap">
+        <div class="mainc">
+
+          <!-- बाली -->
+          <section id="plant" class="card on">
+            <div class="chead"><i class="cico">🌱</i>
+              <div>
+                <h2 data-t="plantH"></h2>
+                <p class="hint" data-t="plantSub"></p>
+              </div><span class="tag" data-t="localPrivate"></span>
+            </div>
+            <p class="lead" data-t="plantHint"></p>
+            <div data-pick="plant"></div>
+            <h3 data-t="moreNote"></h3>
+            <input id="plantNote" data-p="note">
+            <button class="go" data-t="analyze" id="plantGo"></button>
+            <p class="privacy">🔒 <span data-t="privacyNote"></span></p>
+            <div class="out" id="plantOut"></div>
+            <h3 data-t="history"></h3>
+            <div id="plantHist" class="histlist"></div>
+          </section>
+
+          <!-- लेबल -->
+          <section id="label" class="card">
+            <div class="chead"><i class="cico">🏷️</i>
+              <div>
+                <h2 data-t="labelH"></h2>
+              </div>
+            </div>
+            <p class="lead" data-t="labelHint"></p>
+            <select id="kind">
+              <option value="pesticide" data-t="pest"></option>
+              <option value="fertilizer" data-t="fert"></option>
+            </select>
+            <h3 data-t="front"></h3>
+            <div data-pick="front"></div>
+            <h3 data-t="back"></h3>
+            <div data-pick="back"></div>
+            <button class="go" data-t="scan" id="labelGo"></button>
+            <div class="out" id="labelOut"></div>
+            <h3 data-t="history"></h3>
+            <div id="labelHist" class="histlist"></div>
+          </section>
+
+          <!-- कागजात -->
+          <section id="doc" class="card">
+            <div class="chead"><i class="cico">📄</i>
+              <div>
+                <h2 data-t="docH"></h2>
+              </div>
+            </div>
+            <p class="lead" data-t="docHint"></p>
+            <label class="big"><input type="file" id="docFile" accept=".pdf,.txt,.md,image/*" hidden>📄 <span
+                data-t="docUp"></span></label>
+            <label class="chk"><input type="checkbox" id="ocr"> <span data-t="ocrOpt"></span></label>
+            <div class="out" id="docStat"></div>
+            <div id="docList" class="histlist"></div>
+            <div id="docBox" hidden>
+              <h3 id="docName"></h3>
+              <button class="go alt" id="docSumBtn" data-t="summary"></button>
+              <div class="out" id="docSum"></div>
+              <div id="docLog" class="log"></div>
+              <div class="askrow"><input id="docQ" data-p="docPh"><button class="mic" id="docMic">🎤</button><button
+                  class="send" id="docGo" data-t="ask"></button></div>
+            </div>
+          </section>
+
+          <!-- समाचार -->
+          <section id="news" class="card">
+            <div class="chead"><i class="cico">📰</i>
+              <div>
+                <h2 data-t="newsH"></h2>
+              </div>
+            </div>
+            <p class="lead" data-t="newsHint"></p>
+            <button class="go" id="newsRefresh" data-t="newsRefresh"></button>
+            <button class="go alt" id="newsAll" data-t="newsAll"></button>
+            <div class="out" id="newsStat"></div>
+            <div id="newsList"></div>
+          </section>
+
+          <!-- च्याट -->
+          <section id="chat" class="card">
+            <div class="toolbar"><button id="chatHistBtn" data-t="oldChats"></button><button id="chatNew"
+                data-t="newChat"></button></div>
+            <div id="chatHist" class="histlist" hidden></div>
+            <div id="chatCtx" class="chip" hidden></div>
+            <div id="log" class="log"></div>
+            <div id="chatImgChip" class="chip" hidden></div>
+            <div class="askrow">
+              <label class="mic"><input type="file" id="chatImg" accept="image/*" hidden>📷</label>
+              <input id="chatQ" data-p="chatPh"><button class="mic" id="chatMic">🎤</button><button class="send"
+                id="chatGo" data-t="ask"></button>
+            </div>
+          </section>
+
+          <footer class="disc"><i>🛡️</i><span data-t="foot"></span></footer>
+
+          <!-- history cards (home tab only) -->
+          <section id="homeHistBox">
+            <h2 class="sech" data-t="myHist"></h2>
+            <p class="hint" data-t="histSub"></p>
+            <div id="homeHist" class="hgrid"></div>
+          </section>
+        </div>
+
+        <!-- ===== right column ===== -->
+        <aside class="aside">
+          <div class="acard tint">
+            <h3>💻 <span data-t="deviceH"></span></h3>
+            <div class="dev"><span id="devModel">Gemma 4 · Ollama</span><span id="devState"></span></div>
+          </div>
+        </aside>
+      </main>
+    </div>
+  </div>
   <div id="toast" hidden></div>
   <script src="/static/i18n.js"></script>
   <script src="/static/app.js"></script>
