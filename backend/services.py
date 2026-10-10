@@ -47,6 +47,29 @@ def label(front, back, kind, lang, force):
     return vision("label", raws, prompt, P.LABEL_SCHEMA, lang, force, C.LABEL_IMG_MAX, True, "product_name", num_predict=1200)
 
 
+async def label_learn(record_id, lang):
+    """General knowledge about a scanned product: what it is used for and how it is generally applied.
+    Offline (model knowledge only), never gives doses. Cached inside the label record."""
+    r = db.get_record(record_id)
+    if not r or r["kind"] != "label":
+        yield {"t": "error", "m": P.MSG[lang]["nodoc"]}
+        return
+    d = r["data"]
+    if d.get("learn"):
+        yield {"t": "result", "v": d["learn"], "cached": True}
+        return
+    g = lambda k: d.get(k) if isinstance(d.get(k), str) else ""
+    prompt = P.LEARN.format(name=g("product_name"), ai=g("active_ingredient"), cat=g("category"),
+                            targets=", ".join(x for x in (d.get("target_pests_crops") or []) if isinstance(x, str)))
+    msgs = [{"role": "system", "content": P.system(lang)}, {"role": "user", "content": prompt}]
+    async for ev in llm.run_json(msgs, None, P.LEARN_SCHEMA, num_predict=700):
+        if ev["t"] == "result":
+            if not ev["v"].get("raw"):   # only cache a valid answer
+                d["learn"] = ev["v"]
+                db.set_record_data(record_id, d)
+        yield ev
+
+
 async def match(plant_id, label_id, lang):
     p, l = db.get_record(plant_id), db.get_record(label_id)
     if not p or not l:

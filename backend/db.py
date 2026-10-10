@@ -93,6 +93,11 @@ def get_record(rid):
     return r
 
 
+def set_record_data(rid, data):
+    """Update a saved record's JSON (used to cache the 'learn more' info on a label)."""
+    q("UPDATE records SET data=? WHERE id=?", (json.dumps(data, ensure_ascii=False), rid))
+
+
 def list_records(kind, limit=30):
     rows = q("SELECT id,kind,title,images,created FROM records WHERE kind=? ORDER BY created DESC LIMIT ?", (kind, limit))
     for r in rows:
