@@ -11,6 +11,20 @@ def save_img(b: bytes) -> str:
     return name
 
 
+def plain(data, skip=("evidence", "unreadable_fields", "learn")) -> str:
+    """A saved result as readable 'name: value' lines (not JSON), so the chat model answers in sentences."""
+    lines = []
+    for k, v in (data or {}).items():
+        if k in skip or v in (None, "", [], "unknown"):
+            continue
+        lines.append(f"{k.replace('_', ' ')}: {', '.join(map(str, v)) if isinstance(v, list) else v}")
+    return "\n".join(lines)
+
+
+def looks_json(s: str) -> bool:
+    return (s or "").lstrip().startswith(("{", "```"))
+
+
 def img_path(url_or_name: str):
     return C.DATA / "img" / url_or_name.rsplit("/", 1)[-1]
 
@@ -101,9 +115,10 @@ async def chat(chat_id, message, raw_img, lang, record_id):
     ctx = ""
     rec = db.get_record(row["ref"]) if row["ref"] else None
     if rec:
-        ctx = P.RECORD_CTX.format(kind=rec["kind"], data=json.dumps(rec["data"], ensure_ascii=False)[:3000])
-    hist = [{"role": m["role"], "content": m["content"]} for m in db.messages(chat_id, 12)]
-    msgs = [{"role": "system", "content": P.system(lang) + ctx}] + hist + [{"role": "user", "content": message}]
+        ctx = P.RECORD_CTX.format(kind=rec["kind"], data=plain(rec["data"])[:3000])
+    hist = [{"role": m["role"], "content": m["content"]} for m in db.messages(chat_id, 12)
+            if not (m["role"] == "assistant" and looks_json(m["content"]))]   # old JSON-style replies would teach the model to answer in JSON
+    msgs = [{"role": "system", "content": P.system(lang, plain=True) + ctx}] + hist + [{"role": "user", "content": message}]
     db.add_msg(chat_id, "user", message, name)
     buf = []
     try:
@@ -130,7 +145,7 @@ async def doc_ask(doc_id, question, lang):
     sources = [{"page": c["page"], "snippet": c["text"][:140]} for c in sel]
     yield {"t": "sources", "v": sources}
     prompt = P.DOC.format(nf=P.DOC_NF[lang], ctx=ctx, q=question)
-    msgs = [{"role": "system", "content": P.system(lang)}] + [{"role": m["role"], "content": m["content"]} for m in hist] + [{"role": "user", "content": prompt}]
+    msgs = [{"role": "system", "content": P.system(lang, plain=True)}] + [{"role": m["role"], "content": m["content"]} for m in hist] + [{"role": "user", "content": prompt}]
     db.add_msg(cid, "user", question)
     buf = []
     try:
@@ -154,7 +169,7 @@ async def doc_summary(doc_id, lang):
             break
         ctx.append(f"[पृष्ठ {c['page']}] {c['text'][:700]}")
         size += len(ctx[-1])
-    msgs = [{"role": "system", "content": P.system(lang)}, {"role": "user", "content": P.DOC_SUMMARY.format(ctx="\n".join(ctx))}]
+    msgs = [{"role": "system", "content": P.system(lang, plain=True)}, {"role": "user", "content": P.DOC_SUMMARY.format(ctx="\n".join(ctx))}]
     buf = []
     async for ev in llm.run_text(msgs, temperature=0.2, num_predict=500):
         if ev["t"] == "delta":

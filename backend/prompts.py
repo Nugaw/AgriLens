@@ -6,20 +6,30 @@ RULES:
 1. NEVER invent dosages, concentrations, mixing ratios, frequencies, pre-harvest intervals, PPE, target crops or pests.
 2. A printed product label is the source of truth. Copy numbers, chemical names, units and percentages exactly.
 3. If something is missing or unreadable, say so. Do not guess.
-4. Mark evidence: OBSERVED (visible), EXTRACTED (read from label/document), INFERRED (tentative), UNKNOWN.
-5. Never give a definite disease diagnosis from a photo alone; give possibilities with uncertainty.
-6. Keep answers short and simple. A farmer will read (or listen to) them on a phone."""
+4. Never give a definite disease diagnosis from a photo alone; give possibilities with uncertainty.
+5. Keep answers short and simple. A farmer will read (or listen to) them on a phone."""
+
+# Only for structured (JSON-schema) answers: chat and document answers must stay plain sentences.
+EVIDENCE_RULE = "\n6. In structured results, mark evidence: OBSERVED (visible), EXTRACTED (read from label/document), INFERRED (tentative), UNKNOWN."
 
 NR = {"ne": "लेबलमा पढ्न सकिएन", "en": "Not readable from the provided image"}
 
-LANG = {
+LANG = {   # structured answers (JSON schema): keys stay English, values are in the farmer's language
     "ne": "भाषा: सरल नेपाली (देवनागरी), किसानले बुझ्ने सजिला शब्दमा। संख्या, रासायनिक नाम र एकाइ (जस्तै 20%, 5 ml/L) जस्ताको तस्तै राख्नुहोस्। JSON का key अंग्रेजीमै राख्नुहोस्, value नेपालीमा लेख्नुहोस्।",
     "en": "Language: simple English suitable for a farmer.",
 }
+LANG_TEXT = {   # chat, document answers, summaries: plain sentences, never JSON
+    "ne": "भाषा: सरल नेपाली (देवनागरी), किसानले बुझ्ने सजिला शब्दमा। संख्या, रासायनिक नाम र एकाइ (जस्तै 20%, 5 ml/L) जस्ताको तस्तै राख्नुहोस्। साधारण वाक्यमा उत्तर दिनुहोस्; JSON, कोड ब्लक, {} वा key: value ढाँचा कहिल्यै नलेख्नुहोस्।",
+    "en": "Language: simple English suitable for a farmer. Answer in plain sentences; never output JSON, code blocks or key: value dumps.",
+}
 
 
-def system(lang):
-    return SYSTEM + "\n\n" + LANG.get(lang, LANG["en"])
+def system(lang, plain=False):
+    """Default = structured (JSON-schema) tasks: plant, label, match, news, learn. Existing callers keep working.
+    plain=True = chat, document answers and summaries: sentences only, never JSON."""
+    if plain:
+        return SYSTEM + "\n\n" + LANG_TEXT.get(lang, LANG_TEXT["en"])
+    return SYSTEM + EVIDENCE_RULE + "\n\n" + LANG.get(lang, LANG["en"])
 
 
 def S(): return {"type": "string"}
@@ -74,7 +84,7 @@ DOC_NF = {"ne": "यो जानकारी कागजातमा भेट
 DOC_SUMMARY = "Summarize this document for a farmer in at most 6 short bullet points. Use only facts in the text. Mention page numbers when useful.\n\nTEXT:\n{ctx}"
 NEWS = ('Summarize this agriculture news for a Nepali farmer. Use ONLY facts in the text; add no numbers, prices or dates that are not present. '
         'summary = 2-3 short sentences; key_points = up to 3 short items; farmer_relevance = one sentence on who it matters to (no chemical advice).\n\nTITLE: {title}\nTEXT: {text}')
-RECORD_CTX = "\n\nThe farmer is asking about this earlier {kind} result (JSON). Use it as context and do not contradict it:\n{data}"
+RECORD_CTX = "\n\nThe farmer is asking about this earlier {kind} result. Use it as background and do not contradict it. Reply in plain sentences, never in JSON:\n{data}"
 
 QUALITY = {
     "ne": {"small": ("फोटो साना छ", "ठूलो/नजिकको फोटो लिनुहोस्"),
