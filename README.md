@@ -1,6 +1,7 @@
 <div align="center">
 
 # 🌾 AgriLens
+
 ### कृषि लेन्स — an offline, Nepali-first farming assistant
 
 **Snap a photo. Read the label. Ask in Nepali. Listen to the answer.**
@@ -31,11 +32,11 @@ It is built around one rule: **a printed product label is the source of truth.**
 <table>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/screenshots/plant.png" alt="AgriLens Plant tab: take or choose a photo of a sick leaf, add a note, and get possible causes"><br>
+      <img src="docs/plant.png" alt="AgriLens Plant tab: take or choose a photo of a sick leaf, add a note, and get possible causes"><br>
       <sub><b>🌱 Plant (बाली)</b> — add a close-up photo and a short note</sub>
     </td>
     <td width="50%" align="center">
-      <img src="docs/screenshots/label.png" alt="AgriLens Label tab: product name, type and active ingredient read from a pesticide label, with unreadable fields flagged"><br>
+      <img src="docs/label.png" alt="AgriLens Label tab: product name, type and active ingredient read from a pesticide label, with unreadable fields flagged"><br>
       <sub><b>🏷️ Label (लेबल)</b> — what is printed, in simple Nepali; unreadable fields are flagged, never guessed</sub>
     </td>
   </tr>
@@ -51,13 +52,13 @@ It is built around one rule: **a printed product label is the source of truth.**
 
 ## ✨ Features
 
-| Tab | What it does |
-|---|---|
-| 🌿 **Plant (बाली)** | Take a close-up of a sick leaf, fruit or stem. AI describes what is visible, lists *possible* causes (never a definite diagnosis) and suggests safe next steps. |
-| 🧪 **Label (लेबल)** | Photograph the front and back of a pesticide or fertilizer pack. AI reads what is printed and shows it in a short card. It then adds general knowledge on what the product is used for and how it is generally applied. |
-| 📄 **Docs (कागजात)** | Upload a PDF, photo or text file, get a summary and ask questions. Answers cite page numbers. Handles scanned PDFs and old-font Nepali PDFs through photo-reading (OCR). |
-| 📰 **News (समाचार)** | Fetch farm news from sources you choose, summarize them in Nepali and read them offline later. |
-| 💬 **Chat (च्याट)** | Free chat, with optional photos. Type, speak or do both in the same message. You can also jump into a chat about any earlier plant or label result. |
+| Tab                  | What it does                                                                                                                                                                                                            |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🌿 **Plant (बाली)**  | Take a close-up of a sick leaf, fruit or stem. AI describes what is visible, lists _possible_ causes (never a definite diagnosis) and suggests safe next steps.                                                         |
+| 🧪 **Label (लेबल)**  | Photograph the front and back of a pesticide or fertilizer pack. AI reads what is printed and shows it in a short card. It then adds general knowledge on what the product is used for and how it is generally applied. |
+| 📄 **Docs (कागजात)** | Upload a PDF, photo or text file, get a summary and ask questions. Answers cite page numbers. Handles scanned PDFs and old-font Nepali PDFs through photo-reading (OCR).                                                |
+| 📰 **News (समाचार)** | Fetch farm news from sources you choose, summarize them in Nepali and read them offline later.                                                                                                                          |
+| 💬 **Chat (च्याट)**  | Free chat, with optional photos. Type, speak or do both in the same message. You can also jump into a chat about any earlier plant or label result.                                                                     |
 
 ### Highlights
 
@@ -138,7 +139,7 @@ flowchart LR
 
 1. Choose **Pesticide / Fungicide** or **Fertilizer (NPK)**.
 2. Add the front photo, and ideally the back photo too.
-3. Tap **Read label**. The result card is grouped into **What is it**, **How to use (as printed)** and **Safety**. Anything not printed is collapsed into a single *"Not found on label"* line.
+3. Tap **Read label**. The result card is grouped into **What is it**, **How to use (as printed)** and **Safety**. Anything not printed is collapsed into a single _"Not found on label"_ line.
 4. A **More info** section is added automatically, explaining what the product is used for, how it works, how it is generally applied and basic precautions. This comes from the model's general knowledge of the active ingredient and is cached with the scan.
 5. Optional: **Does this product suit my plant problem?** compares your last plant photo with the label's printed targets.
 
@@ -181,21 +182,21 @@ News is contacted **only when you press the button**, and only for the sources y
 
 All settings live in `backend/config.py` and can be overridden with environment variables.
 
-| Variable | Default | Meaning |
-|---|---|---|
-| `OLLAMA_URL` | `http://localhost:11434` | Where Ollama runs |
-| `AGRILENS_MODEL` | `gemma4:e4b` | Model name |
-| `AGRILENS_NUM_CTX` | `8192` | Context size. **Keep it constant**, because Ollama reloads the model if it changes |
-| `AGRILENS_KEEP_ALIVE` | `30m` | How long the model stays in RAM |
-| `AGRILENS_THINK` | `0` | `1` enables thinking mode (slower) |
-| `AGRILENS_IMG_MAX` | `1280` | Longest image side sent to the model (plants, chat) |
-| `AGRILENS_LABEL_IMG_MAX` | `1600` | Same for labels, which need more pixels for small print |
-| `AGRILENS_MAX_UPLOAD_MB` | `25` | Maximum upload size |
-| `AGRILENS_OCR_MAX_PAGES` | `8` | Maximum pages read by photo-reading |
-| `AGRILENS_DATA` | `./data` | Where the database, images and voices are stored |
-| `AGRILENS_TTS_MODEL` | `data/voices/ne_NP-google-medium.onnx` | Piper voice file |
-| `AGRILENS_TTS_CMD` | `python -m piper ...` | Custom Piper command |
-| `AGRILENS_NEWS_SOURCES` | `./news_sources.json` | News source list |
+| Variable                 | Default                                | Meaning                                                                            |
+| ------------------------ | -------------------------------------- | ---------------------------------------------------------------------------------- |
+| `OLLAMA_URL`             | `http://localhost:11434`               | Where Ollama runs                                                                  |
+| `AGRILENS_MODEL`         | `gemma4:e4b`                           | Model name                                                                         |
+| `AGRILENS_NUM_CTX`       | `8192`                                 | Context size. **Keep it constant**, because Ollama reloads the model if it changes |
+| `AGRILENS_KEEP_ALIVE`    | `30m`                                  | How long the model stays in RAM                                                    |
+| `AGRILENS_THINK`         | `0`                                    | `1` enables thinking mode (slower)                                                 |
+| `AGRILENS_IMG_MAX`       | `1280`                                 | Longest image side sent to the model (plants, chat)                                |
+| `AGRILENS_LABEL_IMG_MAX` | `1600`                                 | Same for labels, which need more pixels for small print                            |
+| `AGRILENS_MAX_UPLOAD_MB` | `25`                                   | Maximum upload size                                                                |
+| `AGRILENS_OCR_MAX_PAGES` | `8`                                    | Maximum pages read by photo-reading                                                |
+| `AGRILENS_DATA`          | `./data`                               | Where the database, images and voices are stored                                   |
+| `AGRILENS_TTS_MODEL`     | `data/voices/ne_NP-google-medium.onnx` | Piper voice file                                                                   |
+| `AGRILENS_TTS_CMD`       | `python -m piper ...`                  | Custom Piper command                                                               |
+| `AGRILENS_NEWS_SOURCES`  | `./news_sources.json`                  | News source list                                                                   |
 
 Example (Linux/macOS):
 
@@ -225,7 +226,7 @@ AgriLens/
 │   ├── app.js         # No build step
 │   ├── i18n.js        # Nepali + English strings
 │   └── styles.css
-├── docs/screenshots/  # images used in this README
+├── docs/              # screenshots used in this README
 ├── scripts/get_voice.py
 ├── news_sources.json
 ├── requirements.txt
@@ -236,18 +237,18 @@ AgriLens/
 
 ## 🔌 API at a glance
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET | `/api/health` | Ollama, model and voice status |
-| POST | `/api/plant` | Analyze a plant photo |
-| POST | `/api/label` | Read a label (front + optional back) |
-| POST | `/api/records/{id}/learn` | General "what is it used for / how" info for a scanned label |
-| POST | `/api/match` | Compare a plant problem with a label |
-| GET / DELETE | `/api/records`, `/api/records/{id}` | Scan history |
-| POST / GET / DELETE | `/api/docs`, `/api/docs/{id}/...` | Upload, summarize, ask, delete documents |
-| POST / GET / DELETE | `/api/chat`, `/api/chats...` | Chat and chat history |
-| GET / POST | `/api/news`, `/api/news/refresh`, `/api/news/{id}/summary` | News |
-| POST | `/api/tts` | Offline voice (when Piper is installed) |
+| Method              | Endpoint                                                   | Purpose                                                      |
+| ------------------- | ---------------------------------------------------------- | ------------------------------------------------------------ |
+| GET                 | `/api/health`                                              | Ollama, model and voice status                               |
+| POST                | `/api/plant`                                               | Analyze a plant photo                                        |
+| POST                | `/api/label`                                               | Read a label (front + optional back)                         |
+| POST                | `/api/records/{id}/learn`                                  | General "what is it used for / how" info for a scanned label |
+| POST                | `/api/match`                                               | Compare a plant problem with a label                         |
+| GET / DELETE        | `/api/records`, `/api/records/{id}`                        | Scan history                                                 |
+| POST / GET / DELETE | `/api/docs`, `/api/docs/{id}/...`                          | Upload, summarize, ask, delete documents                     |
+| POST / GET / DELETE | `/api/chat`, `/api/chats...`                               | Chat and chat history                                        |
+| GET / POST          | `/api/news`, `/api/news/refresh`, `/api/news/{id}/summary` | News                                                         |
+| POST                | `/api/tts`                                                 | Offline voice (when Piper is installed)                      |
 
 Long-running endpoints stream **NDJSON** events: `queued`, `progress`, `delta`, `result`, `warn`, `error`, `done`.
 
@@ -262,20 +263,20 @@ Everything (chats, scans, documents, news) lives in `data/agrilens.db` and `data
 
 ## 🛠️ Troubleshooting
 
-| Problem | Fix |
-|---|---|
-| Yellow banner: *AI (Ollama) is not running* | Run `ollama serve` in a terminal |
-| Banner: *Model not found* | Run `ollama pull gemma4:e4b` |
-| First answer is very slow | The model is loading. Wait for the banner to disappear, or raise `AGRILENS_KEEP_ALIVE` |
-| Answers get slower after changing settings | Keep `AGRILENS_NUM_CTX` constant; changing it reloads the model |
-| No 🎤 button | You need Chrome, internet, and https or localhost (not plain `http://<ip>`) |
-| No Nepali voice | Add one in the device's text-to-speech settings, or install Piper (see above) |
-| Piper test fails | Set `AGRILENS_TTS_CMD` for your Piper version |
-| Scanned PDF is rejected | `pip install pypdfium2` (already in `requirements.txt`) |
-| Nepali PDF text looks broken | Tick *"Nepali text looks broken"* when uploading to read it from images |
-| Photo is rejected as blurry/dark | Retake in daylight, hold steady, or press *Analyze anyway* |
-| Old UI after an update | Hard-refresh with Ctrl+Shift+R |
-| Phone can't open the page | Same Wi-Fi? Server started with `--host 0.0.0.0`? Firewall allows port 8000? |
+| Problem                                     | Fix                                                                                    |
+| ------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Yellow banner: _AI (Ollama) is not running_ | Run `ollama serve` in a terminal                                                       |
+| Banner: _Model not found_                   | Run `ollama pull gemma4:e4b`                                                           |
+| First answer is very slow                   | The model is loading. Wait for the banner to disappear, or raise `AGRILENS_KEEP_ALIVE` |
+| Answers get slower after changing settings  | Keep `AGRILENS_NUM_CTX` constant; changing it reloads the model                        |
+| No 🎤 button                                | You need Chrome, internet, and https or localhost (not plain `http://<ip>`)            |
+| No Nepali voice                             | Add one in the device's text-to-speech settings, or install Piper (see above)          |
+| Piper test fails                            | Set `AGRILENS_TTS_CMD` for your Piper version                                          |
+| Scanned PDF is rejected                     | `pip install pypdfium2` (already in `requirements.txt`)                                |
+| Nepali PDF text looks broken                | Tick _"Nepali text looks broken"_ when uploading to read it from images                |
+| Photo is rejected as blurry/dark            | Retake in daylight, hold steady, or press _Analyze anyway_                             |
+| Old UI after an update                      | Hard-refresh with Ctrl+Shift+R                                                         |
+| Phone can't open the page                   | Same Wi-Fi? Server started with `--host 0.0.0.0`? Firewall allows port 8000?           |
 
 ---
 
