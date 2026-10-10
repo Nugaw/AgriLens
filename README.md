@@ -21,7 +21,7 @@ AgriLens provides AI-generated agricultural information for informational purpos
 ```bash
 ollama pull gemma4:e4b            # once (Ollama >= 0.20)
 python -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements.txt 
 uvicorn backend.main:app --host 0.0.0.0 --port 8000
 ```
 
