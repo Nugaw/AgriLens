@@ -178,14 +178,31 @@ async function speak(raw, btn) {
   next();
 }
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+/* Mic input. Typed text always wins: speech is APPENDED after what is already in the box,
+   typing while the mic is on is kept, and sending a message stops the mic (btn._stop). */
 function attachMic(btn, input) {   // needs internet in Chrome and https/localhost; hidden otherwise
   if (!SR || !window.isSecureContext) { btn.hidden = true; return; }
-  let rec = null;
+  let rec = null, base = "", heard = "", skip = 0, mine = "";
+  const join = (a, b) => (a && b ? a.replace(/\s+$/, "") + " " + b : a + b);
+
+  // User typed while the mic is on: typed text becomes the new base, voice already heard is not re-added
+  input.addEventListener("input", () => {
+    if (rec && input.value !== mine) { base = input.value; skip = heard.length; }
+  });
+
+  btn._stop = () => { if (rec) { rec.onresult = null; try { rec.stop(); } catch {} } };   // used when sending
+
   btn.onclick = () => {
     if (rec) return rec.stop();
+    base = input.value; heard = ""; skip = 0; mine = input.value;      // keep what is already typed
     rec = new SR(); rec.lang = S.lang === "ne" ? "ne-NP" : "en-US"; rec.interimResults = true;
-    rec.onresult = e => input.value = [...e.results].map(r => r[0].transcript).join(" ");
-    rec.onend = () => { rec = null; btn.classList.remove("rec"); }; rec.onerror = () => {};
+    rec.onresult = e => {
+      heard = [...e.results].map(r => r[0].transcript).join(" ");
+      mine = join(base, heard.slice(skip).trim());                       // typed text first, voice appended
+      input.value = mine;
+    };
+    rec.onend = () => { rec = null; btn.classList.remove("rec"); };
+    rec.onerror = () => {};
     rec.start(); btn.classList.add("rec");
   };
 }
@@ -251,6 +268,7 @@ async function uploadDoc(file) {
 }
 async function askDoc() {
   const q = $("docQ").value.trim(); if (!q || !S.docId || S.busy) return;
+  $("docMic")._stop?.();   // stop the mic so old speech cannot refill the box
   $("docQ").value = ""; S.busy = true; const log = $("docLog"); bubble(log, "user", q); const b = bubble(log, "assistant"); let src = [];
   const { text } = await run(`/api/docs/${S.docId}/ask`, form({ question: q }), b, { onEvent: ev => { if (ev.t === "sources") src = ev.v; }, onDelta: () => log.scrollTop = log.scrollHeight });
   if (text) bubbleTools(b, () => text, src); S.busy = false;
@@ -307,7 +325,7 @@ function newChat() { S.chatId = ""; setCtx(""); $("log").innerHTML = ""; PICK.ch
 function startChatAbout(recordId, kind) { newChat(); S.chatRef = recordId; setCtx(kind); show(4); $("chatQ").focus(); }
 async function sendChat() {
   const q = $("chatQ").value.trim(), img = PICK.chat ? await PICK.chat : null;
-  if ((!q && !img) || S.busy) return; S.busy = true;
+  if ((!q && !img) || S.busy) return; S.busy = true; $("chatMic")._stop?.();   // stop the mic so old speech cannot refill the box
   const log = $("log"); bubble(log, "user", q || t("chatDef"), ""); if (img) log.lastChild.prepend(Object.assign(new Image(), { src: URL.createObjectURL(img) }));
   $("chatQ").value = ""; PICK.chat = null; $("chatImgChip").hidden = true;
   const b = bubble(log, "assistant");
