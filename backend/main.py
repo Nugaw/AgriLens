@@ -82,6 +82,12 @@ def record(rid: str):
     return r
 
 
+@app.post("/api/records/{rid}/learn")
+async def label_learn(rid: str, lang: str = Form("ne")):
+    """What is this product generally used for, and how is it generally applied (cached on the record)."""
+    return ndjson(S.label_learn(rid, lang), lang)
+
+
 @app.delete("/api/records/{rid}")
 def del_record(rid: str):
     db.del_record(rid)

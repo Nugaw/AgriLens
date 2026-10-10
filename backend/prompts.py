@@ -51,11 +51,21 @@ NEWS_SCHEMA = obj({
     "category": {"type": "string", "enum": ["price", "weather", "scheme", "disease_pest", "technique", "other"]},
     "summary": S(), "key_points": L(), "farmer_relevance": S(),
 })
+LEARN_SCHEMA = obj({
+    "what_it_is": S(), "used_for": L(), "how_it_works": S(),
+    "how_to_use": L(), "safety": L(), "check_label": S(),
+})
 
 PLANT = 'Analyze this crop/plant photo. User note: "{note}". Describe only what is visible; list possible causes (not a diagnosis); suggest safe next steps (e.g. consult the local agriculture technician, isolate affected plants). No chemical doses.'
 LABEL = ('These are the {side} of a {kind} product label. Read ONLY what is printed. For any field not printed or not readable write exactly "{nr}" '
          '(use an empty list for list fields and put the field name in unreadable_fields). hazard_color = colour of the toxicity triangle/band if visible, else "unknown". '
          'farmer_summary = 2 short sentences: what the product is + the single most important safety point; add no dose that is not printed.')
+LEARN = ('Product: {name}. Active ingredient: {ai}. Type: {cat}. Targets printed on label: {targets}. '
+         'Using general agricultural knowledge about this active ingredient (NOT the label), explain for a Nepali farmer: '
+         'what_it_is (1-2 sentences); used_for (common crops/pests/diseases, max 4); how_it_works (1 sentence); '
+         'how_to_use (general method only, e.g. foliar spray, best time of day; NO doses, concentrations, mixing ratios or intervals); '
+         'safety (max 3 general points); check_label (one sentence: follow the printed label for the dose). '
+         'If you are not sure what this product is, say so in what_it_is and leave the lists empty.')
 MATCH = ('Image 1 shows a plant problem, image 2 is a product label. Compare the visible problem with the label\'s printed target pests/diseases/crops. '
          'Do NOT prescribe or give doses. If the label does not list targets, match = "Unknown".')
 OCR = "Transcribe ALL text in this image exactly as written (Nepali and/or English). Keep line breaks. Output only the text, no comments."

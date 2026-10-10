@@ -1,6 +1,8 @@
 "use strict";
 /* AgriLens front-end. No build step. Sections: helpers · images · streaming · results · voice · tabs · boot */
 
+const AUTO_LEARN = true;   // after a fresh label scan, automatically fetch "what is it used for / how is it used" (set false to show a button instead)
+
 const $ = id => document.getElementById(id);
 const S = { lang: localStorage.lang || "ne", tab: +(localStorage.tab || 0), chatId: "", chatRef: "", plantRec: "", docId: "", health: {}, busy: false, stopAll: false };
 const t = k => T[S.lang][k] ?? T.ne[k] ?? k;
@@ -12,6 +14,8 @@ const form = o => { const fd = new FormData(); for (const [k, v] of Object.entri
 const getJSON = async u => (await fetch(u)).json();
 const when = ts => new Date(ts * 1000).toLocaleDateString(S.lang === "ne" ? "ne-NP" : undefined, { month: "short", day: "numeric" });
 function toast(msg) { const x = $("toast"); x.textContent = msg; x.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => x.hidden = true, 5000); }
+/* Enter sends, but not while an IME (Nepali keyboard) is still composing a word */
+const onEnter = (id, fn) => $(id).addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); fn(); } });
 
 /* ---------- images: shrink on the phone BEFORE upload (4-8 MB photo -> ~300 KB) ---------- */
 async function shrink(file, max = 1600, q = 0.85) {
@@ -26,16 +30,17 @@ async function shrink(file, max = 1600, q = 0.85) {
   } catch { return file; }
 }
 const PICK = {};   // slot -> Promise<File>, compressed in the background as soon as the photo is chosen
+/* One "Camera" button. Without the `capture` attribute a phone offers Camera / Photo library / Files in one menu;
+   a laptop simply opens the file picker. So a separate Gallery button is not needed. */
 function mountPickers() {
   document.querySelectorAll("[data-pick]").forEach(box => {
     const id = box.dataset.pick;
-    box.innerHTML = `<div class="two"><label class="big"><input type="file" accept="image/*" capture="environment" hidden>📷 <span data-t="camera"></span></label>` +
-      `<label class="big alt"><input type="file" accept="image/*" hidden>🖼️ <span data-t="gallery"></span></label></div><img class="prev" alt="">`;
-    box.querySelectorAll("input").forEach(inp => inp.onchange = () => {
-      const f = inp.files[0]; if (!f) return;
+    box.innerHTML = `<label class="big"><input type="file" accept="image/*" hidden>📷 <span data-t="camera"></span></label><img class="prev" alt="">`;
+    box.querySelector("input").onchange = e => {
+      const inp = e.target, f = inp.files[0]; if (!f) return;
       const p = box.querySelector(".prev"); p.src = URL.createObjectURL(f); p.style.display = "block";
       PICK[id] = shrink(f, id === "plant" ? 1280 : 1600); inp.value = "";
-    });
+    };
   });
 }
 
@@ -90,7 +95,7 @@ function renderData(v, ev = {}, k = null) {
   if (v == null || typeof v !== "object") return val(k, v);
   if (Array.isArray(v)) return v.length ? "<ul>" + v.map(x => `<li>${renderData(x, {}, k)}</li>`).join("") + "</ul>" : `<span class="nr">—</span>`;
   if (v.raw) return `<div class="row">${md(v.raw)}</div>`;
-  const keys = Object.keys(v).filter(x => !["evidence", "unreadable_fields", "category"].includes(x) || (x === "category" && typeof v[x] === "string" && !v.summary));
+  const keys = Object.keys(v).filter(x => !["evidence", "unreadable_fields", "learn"].includes(x) && (x !== "category" || (typeof v[x] === "string" && !v.summary)));
   keys.sort((a, b) => ["farmer_summary"].includes(b) - ["farmer_summary"].includes(a));
   let html = keys.map(x => {
     const b = ev[x] ? `<span class="badge ${esc(ev[x])}">${esc(T[S.lang].ev[ev[x]] || ev[x])}</span>` : "";
@@ -105,18 +110,49 @@ function speechOf(v) {   // what to read aloud: skip evidence/unreadable/empty
   if (typeof v === "string") return T[S.lang].v[v] || v;
   if (Array.isArray(v)) return v.map(speechOf).filter(Boolean).join("। ");
   if (v.raw) return v.raw;
-  return Object.entries(v).filter(([k]) => !["evidence", "unreadable_fields"].includes(k))
+  return Object.entries(v).filter(([k]) => !["evidence", "unreadable_fields", "learn"].includes(k))
     .map(([k, x]) => { const s = speechOf(x); return s ? `${fl(k)}: ${s}` : ""; }).filter(Boolean).join("। ");
 }
 function actionBtn(label, fn) { const b = el("button", "act", esc(label)); b.onclick = () => fn(b); return b; }
-function showResult(kind, ev, out) {
+
+/* ---------- label: simple card (what it says) + "learn more" (what it is used for, how) ---------- */
+const ok = x => x != null && !isNR(x) && x !== "unknown" && !(Array.isArray(x) && !x.length);
+function renderLabel(v) {
+  const miss = [];
+  const row = (k, key) => ok(v[k]) ? `<div class="row${key ? " key" : ""}"><b>${esc(fl(k))}</b>${renderData(v[k], {}, k)}</div>` : (miss.push(k), "");
+  const grp = (title, keys, key) => { const h = keys.map(k => row(k, key)).join(""); return h ? `<h3>${esc(t(title))}</h3>${h}` : ""; };
+  return grp("lblWhat", ["farmer_summary", "product_name", "category", "active_ingredient", "npk_ratio", "manufacturer", "nutrient_guide"])
+    + grp("lblUse", ["target_pests_crops", "dosage", "mixing_ratio", "pre_harvest_interval"], true)
+    + grp("lblSafe", ["hazard_color", "ppe", "warnings", "expiry_date"], true)
+    + grp("lblMore", ["manufacture_date", "batch_no"])
+    + (miss.length ? `<p class="hint">⚠ ${esc(t("notOnLabel"))}: ${esc(miss.map(fl).join(", "))}</p>` : "");
+}
+function renderLearn(box, L) {
+  if (L.raw) { box.innerHTML = renderData(L); return; }
+  const sec = (k, v) => ok(v) ? `<div class="row"><b>${esc(t(k))}</b>${renderData(v)}</div>` : "";
+  box.innerHTML = `<h3>${esc(t("lnTitle"))}</h3><p class="hint">ℹ️ ${esc(t("learnNote"))}</p>`
+    + sec("lnWhat", L.what_it_is) + sec("lnUsed", L.used_for) + sec("lnHow", L.how_it_works)
+    + sec("lnApply", L.how_to_use) + sec("lnSafe", L.safety) + (ok(L.check_label) ? `<div class="warn">${esc(L.check_label)}</div>` : "");
+  const bar = el("div", "actions small"); bar.append(actionBtn("🔊 " + t("listen"), b => speak(speechOf(L), b))); box.append(bar);
+}
+async function runLearn(id, out, btn) {
+  btn?.remove(); const box = el("div", "out"); out.append(box);
+  await run(`/api/records/${id}/learn`, form({}), box, { onResult: (ev, r) => renderLearn(r, ev.v) });
+}
+
+function showResult(kind, ev, out, fresh = false) {
   const imgs = (ev.images || []).map(u => `<img src="${esc(u)}" alt="">`).join("");
-  out.innerHTML = (imgs ? `<div class="thumbs">${imgs}</div>` : "") + renderData(ev.v, ev.v.evidence || {});
+  const isLabel = kind === "label" && !ev.v.raw;
+  out.innerHTML = (imgs ? `<div class="thumbs">${imgs}</div>` : "") + (isLabel ? renderLabel(ev.v) : renderData(ev.v, ev.v.evidence || {}));
   const bar = el("div", "actions");
   bar.append(actionBtn("🔊 " + t("listen"), b => speak(speechOf(ev.v), b)));
+  const learnable = isLabel && ev.record_id && !ev.v.learn && !(fresh && AUTO_LEARN);
+  if (learnable) bar.append(actionBtn(t("learnBtn"), b => runLearn(ev.record_id, out, b)));
   if (kind !== "news") bar.append(actionBtn(t("askAbout"), () => startChatAbout(ev.record_id, kind)));
   if (kind === "label" && S.plantRec) bar.append(actionBtn(t("matchBtn"), () => runMatch(ev.record_id, out)));
   out.append(bar);
+  if (isLabel && ev.v.learn) { const box = el("div", "out"); out.append(box); renderLearn(box, ev.v.learn); }
+  else if (isLabel && ev.record_id && fresh && AUTO_LEARN) runLearn(ev.record_id, out, null);
 }
 async function runMatch(labelId, out) {
   const box = el("div", "out"); out.append(box);
@@ -176,17 +212,35 @@ async function speak(raw, btn) {
   };
   next();
 }
+
+/* Mic input that works TOGETHER with the keyboard:
+   - speech is appended after whatever is already typed (never overwrites it)
+   - you can keep typing while the mic is listening; your typing becomes the new base and speech continues after it
+   - sending a message turns the mic off so late results cannot refill the box */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const MICS = []; const stopMics = () => MICS.forEach(f => f());
 function attachMic(btn, input) {   // needs internet in Chrome and https/localhost; hidden otherwise
   if (!SR || !window.isSecureContext) { btn.hidden = true; return; }
-  let rec = null;
+  let rec = null, base = "", done = 0, seen = 0;
+  const join = (a, b) => a && b && !/\s$/.test(a) ? a + " " + b : a + b;
+  const kill = () => { const r = rec; rec = null; try { r?.abort(); } catch {} btn.classList.remove("rec"); };
+  MICS.push(kill);
   btn.onclick = () => {
-    if (rec) return rec.stop();
-    rec = new SR(); rec.lang = S.lang === "ne" ? "ne-NP" : "en-US"; rec.interimResults = true;
-    rec.onresult = e => input.value = [...e.results].map(r => r[0].transcript).join(" ");
-    rec.onend = () => { rec = null; btn.classList.remove("rec"); }; rec.onerror = () => {};
-    rec.start(); btn.classList.add("rec");
+    if (rec) return rec.stop();   // graceful stop: keeps what was heard
+    base = input.value; done = seen = 0;
+    const r = rec = new SR();
+    r.lang = S.lang === "ne" ? "ne-NP" : "en-US"; r.interimResults = true; r.continuous = true;
+    r.onresult = e => {
+      if (rec !== r) return;
+      seen = e.results.length;
+      const said = [...e.results].slice(done).map(x => x[0].transcript.trim()).filter(Boolean).join(" ");
+      input.value = join(base, said);
+    };
+    r.onend = () => { if (rec === r) rec = null; btn.classList.remove("rec"); };
+    r.onerror = () => {};
+    r.start(); btn.classList.add("rec");
   };
+  input.addEventListener("input", () => { if (rec) { base = input.value; done = seen; } });   // user typed: keep it, continue speech after it
 }
 
 /* ---------- chat bubbles (shared by Chat and Docs) ---------- */
@@ -211,7 +265,7 @@ async function sendPlant(force = false) {
   const fd = form({ image: f, note: $("plantNote").value, force: force ? "true" : null });
   await run("/api/plant", fd, $("plantOut"), {
     onWarn: (ev, r) => r.append(actionBtn(t("retry"), () => sendPlant(true))),
-    onResult: (ev, r) => { S.plantRec = ev.record_id; showResult("plant", ev, r); loadHist("plant"); },
+    onResult: (ev, r) => { S.plantRec = ev.record_id; showResult("plant", ev, r, true); loadHist("plant"); },
   });
 }
 /* ---------- tab: label ---------- */
@@ -221,7 +275,7 @@ async function sendLabel(force = false) {
   const fd = form({ front: f, back: b || null, kind: $("kind").value, force: force ? "true" : null });
   await run("/api/label", fd, $("labelOut"), {
     onWarn: (ev, r) => r.append(actionBtn(t("retry"), () => sendLabel(true))),
-    onResult: (ev, r) => { showResult("label", ev, r); loadHist("label"); },
+    onResult: (ev, r) => { showResult("label", ev, r, true); loadHist("label"); },
   });
 }
 
@@ -249,10 +303,14 @@ async function uploadDoc(file) {
   });
 }
 async function askDoc() {
-  const q = $("docQ").value.trim(); if (!q || !S.docId || S.busy) return;
-  $("docQ").value = ""; S.busy = true; const log = $("docLog"); bubble(log, "user", q); const b = bubble(log, "assistant"); let src = [];
-  const { text } = await run(`/api/docs/${S.docId}/ask`, form({ question: q }), b, { onEvent: ev => { if (ev.t === "sources") src = ev.v; }, onDelta: () => log.scrollTop = log.scrollHeight });
-  if (text) bubbleTools(b, () => text, src); S.busy = false;
+  if (S.busy) return;
+  const q = $("docQ").value.trim(); if (!q || !S.docId) return;
+  S.busy = true; stopMics();
+  try {
+    $("docQ").value = ""; const log = $("docLog"); bubble(log, "user", q); const b = bubble(log, "assistant"); let src = [];
+    const { text } = await run(`/api/docs/${S.docId}/ask`, form({ question: q }), b, { onEvent: ev => { if (ev.t === "sources") src = ev.v; }, onDelta: () => log.scrollTop = log.scrollHeight });
+    if (text) bubbleTools(b, () => text, src);
+  } finally { S.busy = false; }
 }
 async function summarizeDoc() {
   if (!S.docId) return;
@@ -269,7 +327,7 @@ async function loadNews() {
   const rows = await getJSON("/api/news?lang=" + S.lang), box = $("newsList");
   box.innerHTML = rows.length ? "" : `<p class="hint">${esc(t("noNews"))}</p>`;
   for (const a of rows) {
-    const c = el("div", "news", `<a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer" class="nt">${esc(a.title)}</a><small>${esc(a.source)} ${esc(a.published.slice(0, 16))}</small><div class="sum"></div>`);
+    const c = el("div", "news", `<a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer" class="nt">${esc(a.title)}</a><small>${esc(a.source)} ${esc((a.published || "").slice(0, 16))}</small><div class="sum"></div>`);
     c.dataset.id = a.id; const sum = c.querySelector(".sum");
     if (a.summary) renderNews(sum, a.summary); else c.append(actionBtn("📝 " + t("newsSum"), () => summarizeNews(c)));
     box.append(c);
@@ -305,14 +363,19 @@ function setCtx(label) { const c = $("chatCtx"); c.hidden = !label; c.textConten
 function newChat() { S.chatId = ""; setCtx(""); $("log").innerHTML = ""; PICK.chat = null; $("chatImgChip").hidden = true; }
 function startChatAbout(recordId, kind) { newChat(); S.chatRef = recordId; setCtx(kind); show(4); $("chatQ").focus(); }
 async function sendChat() {
+  if (S.busy) return;
   const q = $("chatQ").value.trim(), img = PICK.chat ? await PICK.chat : null;
-  if ((!q && !img) || S.busy) return; S.busy = true;
-  const log = $("log"); bubble(log, "user", q || t("chatDef"), ""); if (img) log.lastChild.prepend(Object.assign(new Image(), { src: URL.createObjectURL(img) }));
-  $("chatQ").value = ""; PICK.chat = null; $("chatImgChip").hidden = true;
-  const b = bubble(log, "assistant");
-  const { text } = await run("/api/chat", form({ message: q, chat_id: S.chatId, record_id: S.chatRef, image: img }), b, {
-    onEvent: ev => { if (ev.t === "meta") S.chatId = ev.chat_id; }, onDelta: () => log.scrollTop = log.scrollHeight });
-  if (text) bubbleTools(b, () => text); setCtx(""); S.busy = false; loadChatList();
+  if (!q && !img) return;
+  S.busy = true; stopMics();
+  try {   // busy ALWAYS resets, even if the request fails, so typing/Send never gets stuck
+    const log = $("log"); bubble(log, "user", q || t("chatDef"), ""); if (img) log.lastChild.prepend(Object.assign(new Image(), { src: URL.createObjectURL(img) }));
+    $("chatQ").value = ""; PICK.chat = null; $("chatImgChip").hidden = true;
+    const b = bubble(log, "assistant");
+    const { text } = await run("/api/chat", form({ message: q, chat_id: S.chatId, record_id: S.chatRef, image: img }), b, {
+      onEvent: ev => { if (ev.t === "meta") S.chatId = ev.chat_id; }, onDelta: () => log.scrollTop = log.scrollHeight });
+    if (text) bubbleTools(b, () => text);
+    setCtx(""); loadChatList();
+  } finally { S.busy = false; }
 }
 
 /* ---------- shell: tabs, language, theme, font size, health ---------- */
@@ -341,9 +404,9 @@ $("theme").onclick = () => { const d = document.body.dataset.theme === "dark"; d
 $("fsUp").onclick = () => setFs(2); $("fsDown").onclick = () => setFs(-2);
 $("plantGo").onclick = () => sendPlant(); $("labelGo").onclick = () => sendLabel();
 $("docFile").onchange = e => { uploadDoc(e.target.files[0]); e.target.value = ""; };
-$("docGo").onclick = askDoc; $("docSumBtn").onclick = summarizeDoc; $("docQ").onkeydown = e => e.key === "Enter" && askDoc();
+$("docGo").onclick = askDoc; $("docSumBtn").onclick = summarizeDoc; onEnter("docQ", askDoc);
 $("newsRefresh").onclick = refreshNews; $("newsAll").onclick = summarizeAll;
-$("chatGo").onclick = sendChat; $("chatQ").onkeydown = e => e.key === "Enter" && sendChat(); $("chatNew").onclick = newChat;
+$("chatGo").onclick = sendChat; onEnter("chatQ", sendChat); $("chatNew").onclick = newChat;
 $("chatHistBtn").onclick = () => { $("chatHist").hidden = !$("chatHist").hidden; if (!$("chatHist").hidden) loadChatList(); };
 $("chatImg").onchange = e => { const f = e.target.files[0]; if (!f) return; PICK.chat = shrink(f, 1280); const c = $("chatImgChip"); c.hidden = false; c.textContent = "📷 " + f.name + "  ✕"; c.onclick = () => { PICK.chat = null; c.hidden = true; }; e.target.value = ""; };
 attachMic($("chatMic"), $("chatQ")); attachMic($("docMic"), $("docQ"));
