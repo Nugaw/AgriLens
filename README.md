@@ -12,8 +12,9 @@ All on your own laptop or phone, with no cloud AI and no subscription.
 ![Model](https://img.shields.io/badge/Model-Gemma%204%20e4b-4285F4)
 ![Offline](https://img.shields.io/badge/Works-offline-2e7d32)
 ![License](https://img.shields.io/badge/License-MIT-blue)
+[![Presentation](https://img.shields.io/badge/Presentation-Canva-00C4CC?logo=canva&logoColor=white)](https://canva.link/58t8jjiq1ibjd0k)
 
-[Features](#-features) · [Quick start](#-quick-start) · [How it works](#-how-it-works) · [Configuration](#-configuration) · [Troubleshooting](#-troubleshooting) · [Safety](#%EF%B8%8F-agricultural-safety-disclaimer)
+[Screenshots](#-screenshots) · [Presentation](#-presentation) · [Features](#-features) · [Quick start](#-quick-start) · [How it works](#-how-it-works) · [Configuration](#-configuration) · [Troubleshooting](#-troubleshooting) · [Safety](#%EF%B8%8F-agricultural-safety-disclaimer)
 
 </div>
 
@@ -24,6 +25,27 @@ All on your own laptop or phone, with no cloud AI and no subscription.
 AgriLens is a simple web page that runs on a farmer's own computer. It uses **Gemma 4 through Ollama** to look at photos, read text and answer questions, and everything stays on the device. It was designed for farmers in Nepal, so the interface and the answers default to **simple Nepali (देवनागरी)**, with English available at one tap.
 
 It is built around one rule: **a printed product label is the source of truth.** The assistant never invents doses, mixing ratios, waiting periods or safety gear. If something can't be read, it says so.
+
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/plant.png" alt="AgriLens Plant tab: take or choose a photo of a sick leaf, add a note, and get possible causes"><br>
+      <sub><b>🌱 Plant (बाली)</b> — add a close-up photo and a short note</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/label.png" alt="AgriLens Label tab: product name, type and active ingredient read from a pesticide label, with unreadable fields flagged"><br>
+      <sub><b>🏷️ Label (लेबल)</b> — what is printed, in simple Nepali; unreadable fields are flagged, never guessed</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
+## 🎬 Presentation
+
+**[▶ View the AgriLens presentation on Canva](https://canva.link/58t8jjiq1ibjd0k)**
 
 ---
 
@@ -203,6 +225,7 @@ AgriLens/
 │   ├── app.js         # No build step
 │   ├── i18n.js        # Nepali + English strings
 │   └── styles.css
+├── docs/screenshots/  # images used in this README
 ├── scripts/get_voice.py
 ├── news_sources.json
 ├── requirements.txt
