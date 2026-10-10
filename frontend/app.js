@@ -109,14 +109,30 @@ function speechOf(v) {   // what to read aloud: skip evidence/unreadable/empty
     .map(([k, x]) => { const s = speechOf(x); return s ? `${fl(k)}: ${s}` : ""; }).filter(Boolean).join("। ");
 }
 function actionBtn(label, fn) { const b = el("button", "act", esc(label)); b.onclick = () => fn(b); return b; }
+const AUTO_LEARN = true;   // false = show a button instead of running "More info" automatically after a label scan
+function renderLearn(r, l) {
+  if (!l || l.raw) { r.innerHTML = `<div class="err">⚠ ${esc(t("genFail"))}</div>`; return; }
+  r.innerHTML = `<h3>ℹ️ ${esc(fl("more_info"))}</h3><p class="hint">${esc(t("learnNote"))}</p>` + renderData(l);
+  const bar = el("div", "actions small"); bar.append(actionBtn("🔊 " + t("listen"), b => speak(speechOf(l), b))); r.append(bar);
+}
+async function loadLearn(recordId, box) {
+  await run(`/api/records/${recordId}/learn`, form({}), box, { onResult: (ev, r) => renderLearn(r, ev.v) });
+}
 function showResult(kind, ev, out) {
+  const { learn, ...main } = ev.v || {};   // "learn" is shown in its own labelled section, not mixed with label text
   const imgs = (ev.images || []).map(u => `<img src="${esc(u)}" alt="">`).join("");
-  out.innerHTML = (imgs ? `<div class="thumbs">${imgs}</div>` : "") + renderData(ev.v, ev.v.evidence || {});
+  out.innerHTML = (imgs ? `<div class="thumbs">${imgs}</div>` : "") + renderData(main, main.evidence || {});
   const bar = el("div", "actions");
-  bar.append(actionBtn("🔊 " + t("listen"), b => speak(speechOf(ev.v), b)));
+  bar.append(actionBtn("🔊 " + t("listen"), b => speak(speechOf(main), b)));
   if (kind !== "news") bar.append(actionBtn(t("askAbout"), () => startChatAbout(ev.record_id, kind)));
   if (kind === "label" && S.plantRec) bar.append(actionBtn(t("matchBtn"), () => runMatch(ev.record_id, out)));
   out.append(bar);
+  if (kind === "label" && ev.record_id) {
+    const box = el("div", "out"); out.append(box);
+    if (learn && !learn.raw) renderLearn(box, learn);
+    else if (AUTO_LEARN) loadLearn(ev.record_id, box);
+    else box.append(actionBtn(t("learnBtn"), () => loadLearn(ev.record_id, box)));
+  }
 }
 async function runMatch(labelId, out) {
   const box = el("div", "out"); out.append(box);
@@ -267,11 +283,16 @@ async function uploadDoc(file) {
   });
 }
 async function askDoc() {
-  const q = $("docQ").value.trim(); if (!q || !S.docId || S.busy) return;
-  $("docMic")._stop?.();   // stop the mic so old speech cannot refill the box
-  $("docQ").value = ""; S.busy = true; const log = $("docLog"); bubble(log, "user", q); const b = bubble(log, "assistant"); let src = [];
-  const { text } = await run(`/api/docs/${S.docId}/ask`, form({ question: q }), b, { onEvent: ev => { if (ev.t === "sources") src = ev.v; }, onDelta: () => log.scrollTop = log.scrollHeight });
-  if (text) bubbleTools(b, () => text, src); S.busy = false;
+  if (S.busy) { if ($("docQ").value.trim()) toast(t("wait")); return; }
+  const q = $("docQ").value.trim(); if (!q || !S.docId) return;
+  S.busy = true;   // always released in finally, so a failed request can never lock the box
+  try {
+    $("docMic")._stop?.();   // stop the mic so old speech cannot refill the box
+    $("docQ").value = ""; const log = $("docLog"); bubble(log, "user", q); const b = bubble(log, "assistant"); let src = [];
+    const { text } = await run(`/api/docs/${S.docId}/ask`, form({ question: q }), b, { onEvent: ev => { if (ev.t === "sources") src = ev.v; }, onDelta: () => log.scrollTop = log.scrollHeight });
+    if (text) bubbleTools(b, () => text, src);
+  } catch (e) { toast(String(e.message || e)); }
+  finally { S.busy = false; }
 }
 async function summarizeDoc() {
   if (!S.docId) return;
@@ -280,6 +301,11 @@ async function summarizeDoc() {
 
 /* ---------- tab: news ---------- */
 function renderNews(sumEl, s) {
+  if (!s || s.raw || !s.summary) {   // failed/partial answer: show it and allow a retry
+    sumEl.innerHTML = `<div class="err">⚠ ${esc(t("genFail"))}</div>`;
+    sumEl.append(actionBtn("📝 " + t("newsSum"), () => summarizeNews(sumEl.closest(".news"))));
+    return;
+  }
   sumEl.innerHTML = `<span class="chip">${esc(T[S.lang].cat[s.category] || s.category || "")}</span><div class="row">${md(s.summary)}</div>` +
     (s.key_points?.length ? `<b>${esc(fl("key_points"))}</b>${renderData(s.key_points)}` : "") + (s.farmer_relevance ? `<p class="hint">${esc(s.farmer_relevance)}</p>` : "");
   const bar = el("div", "actions small"); bar.append(actionBtn("🔊 " + t("listen"), b => speak(`${s.summary}। ${(s.key_points || []).join("। ")}`, b))); sumEl.append(bar);
@@ -324,14 +350,21 @@ function setCtx(label) { const c = $("chatCtx"); c.hidden = !label; c.textConten
 function newChat() { S.chatId = ""; setCtx(""); $("log").innerHTML = ""; PICK.chat = null; $("chatImgChip").hidden = true; }
 function startChatAbout(recordId, kind) { newChat(); S.chatRef = recordId; setCtx(kind); show(4); $("chatQ").focus(); }
 async function sendChat() {
-  const q = $("chatQ").value.trim(), img = PICK.chat ? await PICK.chat : null;
-  if ((!q && !img) || S.busy) return; S.busy = true; $("chatMic")._stop?.();   // stop the mic so old speech cannot refill the box
-  const log = $("log"); bubble(log, "user", q || t("chatDef"), ""); if (img) log.lastChild.prepend(Object.assign(new Image(), { src: URL.createObjectURL(img) }));
-  $("chatQ").value = ""; PICK.chat = null; $("chatImgChip").hidden = true;
-  const b = bubble(log, "assistant");
-  const { text } = await run("/api/chat", form({ message: q, chat_id: S.chatId, record_id: S.chatRef, image: img }), b, {
-    onEvent: ev => { if (ev.t === "meta") S.chatId = ev.chat_id; }, onDelta: () => log.scrollTop = log.scrollHeight });
-  if (text) bubbleTools(b, () => text); setCtx(""); S.busy = false; loadChatList();
+  if (S.busy) { if ($("chatQ").value.trim()) toast(t("wait")); return; }
+  const q = $("chatQ").value.trim(); if (!q && !PICK.chat) return;
+  S.busy = true;   // always released in finally, so a failed request can never lock the box
+  try {
+    const img = PICK.chat ? await PICK.chat : null;
+    $("chatMic")._stop?.();   // stop the mic so old speech cannot refill the box
+    const log = $("log"); bubble(log, "user", q || t("chatDef"), ""); if (img) log.lastChild.prepend(Object.assign(new Image(), { src: URL.createObjectURL(img) }));
+    $("chatQ").value = ""; PICK.chat = null; $("chatImgChip").hidden = true;
+    const b = bubble(log, "assistant");
+    const { text } = await run("/api/chat", form({ message: q, chat_id: S.chatId, record_id: S.chatRef, image: img }), b, {
+      onEvent: ev => { if (ev.t === "meta") S.chatId = ev.chat_id; }, onDelta: () => log.scrollTop = log.scrollHeight });
+    if (text) bubbleTools(b, () => text);
+    setCtx(""); loadChatList();
+  } catch (e) { toast(String(e.message || e)); }
+  finally { S.busy = false; }
 }
 
 /* ---------- home: recent history cards (plant, label, docs, chats, news) ---------- */
@@ -396,9 +429,10 @@ $("fsUp").onclick = () => setFs(2); $("fsDown").onclick = () => setFs(-2);
 $("histBtn").onclick = () => { show(0); $("homeHistBox").scrollIntoView({ behavior: "smooth" }); };
 $("plantGo").onclick = () => sendPlant(); $("labelGo").onclick = () => sendLabel();
 $("docFile").onchange = e => { uploadDoc(e.target.files[0]); e.target.value = ""; };
-$("docGo").onclick = askDoc; $("docSumBtn").onclick = summarizeDoc; $("docQ").onkeydown = e => e.key === "Enter" && askDoc();
+const onEnter = fn => e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); fn(); } };   // Enter must not fire while a Nepali keyboard/IME is composing a word
+$("docGo").onclick = askDoc; $("docSumBtn").onclick = summarizeDoc; $("docQ").onkeydown = onEnter(askDoc);
 $("newsRefresh").onclick = refreshNews; $("newsAll").onclick = summarizeAll;
-$("chatGo").onclick = sendChat; $("chatQ").onkeydown = e => e.key === "Enter" && sendChat(); $("chatNew").onclick = newChat;
+$("chatGo").onclick = sendChat; $("chatQ").onkeydown = onEnter(sendChat); $("chatNew").onclick = newChat;
 $("chatHistBtn").onclick = () => { $("chatHist").hidden = !$("chatHist").hidden; if (!$("chatHist").hidden) loadChatList(); };
 $("chatImg").onchange = e => { const f = e.target.files[0]; if (!f) return; PICK.chat = shrink(f, 1280); const c = $("chatImgChip"); c.hidden = false; c.textContent = "📷 " + f.name + "  ✕"; c.onclick = () => { PICK.chat = null; c.hidden = true; }; e.target.value = ""; };
 attachMic($("chatMic"), $("chatQ")); attachMic($("docMic"), $("docQ"));
