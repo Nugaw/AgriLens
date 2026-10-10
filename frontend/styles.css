@@ -1,4 +1,4 @@
-:root{--fs:18px;--bg:#f4f8ef;--card:#fff;--tx:#1b2a1b;--g:#2e7d32;--g2:#ef6c00;--bd:#cfe0c3;--mut:#6b7a6b}
+:root{--fs:18px;--bg:#f4f8ef;--card:#fff;--tx:#1b2a1b;--g:#34a7b1;--g2:#ef6c00;--bd:#cfe0c3;--mut:#6b7a6b}
 [data-theme=dark]{--bg:#121a12;--card:#1c271c;--tx:#e8f2e4;--g:#66bb6a;--g2:#ffa726;--bd:#31422f;--mut:#9bb09a}
 *{box-sizing:border-box}html{font-size:var(--fs)}
 body{margin:0;font:1rem/1.6 "Noto Sans Devanagari",system-ui,sans-serif;background:var(--bg);color:var(--tx)}
